@@ -1,38 +1,110 @@
-const mongoose = require("mongoose");
-import Operation from "../models/Operation.js";
-import StockQuant from "../models/StockQuant.js";
-import StockLedger from "../models/StockLedger.js";
+import mongoose from "mongoose";
+import { Operation } from "../models/operation.model.js";
+import { StockQuant } from "../models/stockQuant.model.js";
+import { StockLedger } from "../models/stockLedger.model.js";
+import { ApiResponse } from "../utils/api-response.js";
+import { ApiError } from "../utils/api-error.js";
+import { asyncHandler } from "../utils/async-handler.js";
 
-exports.createOperation = async (req, res) => {
-  try {
-    // status defaults to DRAFT
-    const operation = await Operation.create(req.body);
-    res.status(201).json(operation);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+const createOperation = asyncHandler(async (req, res) => {
+  const {
+    reference,
+    type,
+    partner,
+    sourceLocation,
+    destinationLocation,
+    scheduledDate,
+    lines,
+  } = req.body;
+
+  if (!reference || !type || !sourceLocation || !destinationLocation) {
+    throw new ApiError(
+      400,
+      "Reference, type, source location, and destination location are required"
+    );
   }
-};
 
-exports.getOperations = async (req, res) => {
-  try {
-    const { type, status } = req.query;
-    const query = {};
-    if (type) query.type = type;
-    if (status) query.status = status;
-
-    const operations = await Operation.find(query)
-      .populate("sourceLocation")
-      .populate("destinationLocation")
-      .populate("lines.product");
-
-    res.status(200).json(operations);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  const validTypes = ["RECEIPT", "DELIVERY", "INTERNAL_TRANSFER", "ADJUSTMENT"];
+  if (!validTypes.includes(type)) {
+    throw new ApiError(400, `Type must be one of: ${validTypes.join(", ")}`);
   }
-};
+
+  if (!lines || lines.length === 0) {
+    throw new ApiError(400, "At least one line item is required");
+  }
+
+  // Check for duplicate reference
+  const existingOperation = await Operation.findOne({ reference });
+  if (existingOperation) {
+    throw new ApiError(409, "Operation with this reference already exists");
+  }
+
+  const operation = await Operation.create({
+    reference,
+    type,
+    partner,
+    sourceLocation,
+    destinationLocation,
+    scheduledDate,
+    lines,
+    status: "DRAFT",
+  });
+
+  const populatedOperation = await Operation.findById(operation._id)
+    .populate("sourceLocation")
+    .populate("destinationLocation")
+    .populate("partner")
+    .populate("lines.product");
+
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(201, populatedOperation, "Operation created successfully")
+    );
+});
+
+const getOperations = asyncHandler(async (req, res) => {
+  const { type, status } = req.query;
+
+  const query = {};
+  if (type) {
+    const validTypes = [
+      "RECEIPT",
+      "DELIVERY",
+      "INTERNAL_TRANSFER",
+      "ADJUSTMENT",
+    ];
+    if (!validTypes.includes(type)) {
+      throw new ApiError(400, `Type must be one of: ${validTypes.join(", ")}`);
+    }
+    query.type = type;
+  }
+
+  if (status) {
+    const validStatuses = ["DRAFT", "READY", "DONE", "CANCELLED"];
+    if (!validStatuses.includes(status)) {
+      throw new ApiError(
+        400,
+        `Status must be one of: ${validStatuses.join(", ")}`
+      );
+    }
+    query.status = status;
+  }
+
+  const operations = await Operation.find(query)
+    .populate("sourceLocation")
+    .populate("destinationLocation")
+    .populate("partner")
+    .populate("lines.product")
+    .sort({ createdAt: -1 });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, operations, "Operations fetched successfully"));
+});
 
 // THE MOST IMPORTANT FUNCTION IN THE SYSTEM
-exports.validateOperation = async (req, res) => {
+const validateOperation = asyncHandler(async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -40,17 +112,35 @@ exports.validateOperation = async (req, res) => {
     const { id } = req.params;
     const operation = await Operation.findById(id).session(session);
 
-    if (!operation) throw new Error("Operation not found");
-    if (operation.status === "DONE")
-      throw new Error("Operation already validated");
+    if (!operation) {
+      throw new ApiError(404, "Operation not found");
+    }
+
+    if (operation.status === "DONE") {
+      throw new ApiError(400, "Operation already validated");
+    }
+
+    if (operation.status === "CANCELLED") {
+      throw new ApiError(400, "Cannot validate a cancelled operation");
+    }
+
+    if (!operation.lines || operation.lines.length === 0) {
+      throw new ApiError(400, "Operation has no line items to process");
+    }
 
     // Process each line item in the operation
     for (const line of operation.lines) {
       const qty =
         line.doneQuantity > 0 ? line.doneQuantity : line.demandQuantity;
 
-      // 1. Decrement Source Location (if not a vendor/virtual infinite source)
-      // We use upsert to create the record if it doesn't exist (e.g. negative stock allowed settings)
+      if (qty <= 0) {
+        throw new ApiError(
+          400,
+          "Quantity must be greater than 0 for all line items"
+        );
+      }
+
+      // 1. Decrement Source Location
       await StockQuant.findOneAndUpdate(
         { product: line.product, location: operation.sourceLocation },
         { $inc: { quantity: -qty } },
@@ -85,13 +175,28 @@ exports.validateOperation = async (req, res) => {
     await operation.save({ session });
 
     await session.commitTransaction();
-    res
+
+    const updatedOperation = await Operation.findById(id)
+      .populate("sourceLocation")
+      .populate("destinationLocation")
+      .populate("partner")
+      .populate("lines.product");
+
+    return res
       .status(200)
-      .json({ message: "Operation validated and stock updated", operation });
+      .json(
+        new ApiResponse(
+          200,
+          updatedOperation,
+          "Operation validated and stock updated successfully"
+        )
+      );
   } catch (error) {
     await session.abortTransaction();
-    res.status(500).json({ error: error.message });
+    throw error;
   } finally {
     session.endSession();
   }
-};
+});
+
+export { createOperation, getOperations, validateOperation };
