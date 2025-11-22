@@ -5,8 +5,8 @@ const sendMail = async (options) => {
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
-      name: "Task Manager",
-      link: "https://taskmanagelink.com",
+      name: "StockMaster",
+      link: "https://stockmaster.com",
     },
   });
 
@@ -23,7 +23,7 @@ const sendMail = async (options) => {
   });
 
   const mail = {
-    from: "mail.taskmanager@example.com",
+    from: "noreply@stockmaster.com",
     to: options.email,
     subject: options.subject,
     text: emailTextual,
