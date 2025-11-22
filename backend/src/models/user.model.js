@@ -5,16 +5,6 @@ import crypto from "crypto";
 
 const userSchema = new Schema(
   {
-    avatar: {
-      type: {
-        url: String,
-        localPath: String,
-      },
-      default: {
-        url: `https://placehold.co/200x200`,
-        localPath: "",
-      },
-    },
     username: {
       type: String,
       required: true,
@@ -57,10 +47,11 @@ const userSchema = new Schema(
     emailVerificationTokenExpiry: {
       type: Date,
     },
-    isSuperAdmin: {
-      type: Boolean,
-      default: false,
-    },
+    role: {
+      type: String,
+      enum: ["Manager", "Staff"],
+      default: "Staff",
+    }
   },
   { timestamps: true }
 );
