@@ -15,4 +15,4 @@ const categorySchema = new Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Category", categorySchema);
+export const Category = mongoose.model("Category", categorySchema);

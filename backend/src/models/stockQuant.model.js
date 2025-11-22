@@ -12,7 +12,11 @@ const stockQuantSchema = new Schema(
       ref: "Location",
       required: true,
     },
-    quantity: { type: Number, required: true, default: 0 },
+    quantity: { 
+      type: Number, 
+      required: true, 
+      default: 0 
+    },
   },
   { timestamps: true }
 );
@@ -20,4 +24,7 @@ const stockQuantSchema = new Schema(
 // Composite index to ensure one record per product per location
 stockQuantSchema.index({ product: 1, location: 1 }, { unique: true });
 
-module.exports = mongoose.model("StockQuant", stockQuantSchema);
+// Additional indexes for queries
+stockQuantSchema.index({ quantity: 1 }); // For low stock queries
+
+export const StockQuant = mongoose.model("StockQuant", stockQuantSchema);

@@ -44,4 +44,8 @@ const productSchema = new Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Product", productSchema);
+// Add index for efficient querying
+productSchema.index({ name: 1 });
+productSchema.index({ category: 1 });
+
+export const Product = mongoose.model("Product", productSchema);

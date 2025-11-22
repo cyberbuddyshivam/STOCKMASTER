@@ -12,6 +12,7 @@ const locationSchema = new Schema(
       enum: ["INTERNAL", "CUSTOMER", "VENDOR", "INVENTORY_LOSS", "VIEW"],
       default: "INTERNAL",
       required: true,
+      index: true,
     },
     address: {
       type: String,
@@ -20,4 +21,4 @@ const locationSchema = new Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Location", locationSchema);
+export const Location = mongoose.model("Location", locationSchema);
