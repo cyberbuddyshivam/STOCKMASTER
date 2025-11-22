@@ -73,6 +73,8 @@ export const AuthProvider = ({ children }) => {
       return { success: true, data: response.data };
     } catch (error) {
       const message = error.message || 'Registration failed';
+      console.log(error);
+      
       toast.error(message);
       return { success: false, error: message };
     }

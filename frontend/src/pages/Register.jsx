@@ -54,10 +54,10 @@ const Register = () => {
         // Redirect to login after successful registration
         setTimeout(() => navigate('/login'), 2000);
       } else {
-        setErrors({ general: result.error });
+        console.log('Registration error:', result);
       }
     } catch (error) {
-      setErrors({ general: 'An unexpected error occurred' });
+      console.log(error)
     } finally {
       setLoading(false);
     }
