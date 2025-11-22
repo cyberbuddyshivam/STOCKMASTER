@@ -20,16 +20,26 @@ app.use(
 );
 
 // import the routes
-import healthCheckRouter from "./routes/healthcheck.routes.js";
-import authRouter from "./routes/auth.routes.js";
-import userRouter from "./routes/user.routes.js";
+import healthCheckRouter from "./src/routes/healthcheck.route.js";
+import authRouter from "./src/routes/auth.route.js";
+import productRouter from "./src/routes/product.route.js";
+import categoryRouter from "./src/routes/category.route.js";
+import contactRouter from "./src/routes/contact.route.js";
+import locationRouter from "./src/routes/location.route.js";
+import operationRouter from "./src/routes/operation.route.js";
+import dashboardRouter from "./src/routes/dashboard.route.js";
 
 app.use("/api/v1/healthcheck", healthCheckRouter);
 app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/users", userRouter);
+app.use("/api/v1/products", productRouter);
+app.use("/api/v1/categories", categoryRouter);
+app.use("/api/v1/contacts", contactRouter);
+app.use("/api/v1/locations", locationRouter);
+app.use("/api/v1/operations", operationRouter);
+app.use("/api/v1/dashboard", dashboardRouter);
 
 app.get("/", (req, res) => {
-  res.send("Welcome to BaseCampy");
+  res.send("Welcome to StockMaster API");
 });
 
 export default app;

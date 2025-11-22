@@ -10,8 +10,8 @@ import {
   getCurrentUser,
   changeCurrentPassword,
   resendEmailVerification,
-} from "../controllers/auth.controllers.js";
-import { validate } from "../middlewares/validator.middlewares.js";
+} from "../controller/auth.controller.js";
+import { validate } from "../middleware/validate.middleware.js";
 import {
   userRegisterValidator,
   userLoginValidator,
@@ -19,7 +19,7 @@ import {
   userChangeCurrentPasswordValidator,
   userResetForgotPasswordValidator,
 } from "../validators/index.js";
-import { verifyJWT } from "../middlewares/auth.middlewares.js";
+import { verifyJWT } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
