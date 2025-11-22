@@ -1,22 +1,39 @@
 import React, { useState } from 'react';
-import { User, Lock, UserCheck, Users } from 'lucide-react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { User, Lock, Loader2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
-const Login = ({ onLogin }) => {
+const Login = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+  
   const [loginData, setLoginData] = useState({
-    username: '',
+    email: '',
     password: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
-  const handleSubmit = (e) => {
+  const from = location.state?.from?.pathname || '/dashboard';
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Simple authentication logic (you can replace with real auth later)
-    if (loginData.username === 'admin' && loginData.password === 'admin') {
-      onLogin('manager');
-    } else if (loginData.username === 'staff' && loginData.password === 'staff') {
-      onLogin('staff');
-    } else {
-      alert('Invalid credentials! Try: admin/admin or staff/staff');
+    setErrors({});
+    setLoading(true);
+
+    try {
+      const result = await login(loginData);
+      
+      if (result.success) {
+        navigate(from, { replace: true });
+      } else {
+        setErrors({ general: result.error });
+      }
+    } catch (error) {
+      setErrors({ general: 'An unexpected error occurred' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -25,10 +42,10 @@ const Login = ({ onLogin }) => {
       ...loginData,
       [e.target.name]: e.target.value
     });
-  };
-
-  const handleQuickLogin = (role) => {
-    onLogin(role);
+    // Clear errors when user starts typing
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: null });
+    }
   };
 
   return (
@@ -50,23 +67,32 @@ const Login = ({ onLogin }) => {
           <div className="p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               
-              {/* Username Field */}
+              {/* Error Message */}
+              {errors.general && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                  <p className="text-sm text-red-600 dark:text-red-400">{errors.general}</p>
+                </div>
+              )}
+
+              {/* Email Field */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Username
+                  Email
                 </label>
                 <div className="relative">
                   <User size={20} className="absolute left-3 top-3 text-slate-400" />
                   <input
-                    type="text"
-                    name="username"
-                    value={loginData.username}
+                    type="email"
+                    name="email"
+                    value={loginData.email}
                     onChange={handleInputChange}
                     className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
-                    placeholder="Enter your username"
+                    placeholder="Enter your email"
                     required
+                    disabled={loading}
                   />
                 </div>
+                {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
               </div>
 
               {/* Password Field */}
@@ -84,48 +110,41 @@ const Login = ({ onLogin }) => {
                     className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
                     placeholder="Enter your password"
                     required
+                    disabled={loading}
                   />
                 </div>
+                {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
               </div>
 
               {/* Login Button */}
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-3 rounded-lg font-medium hover:from-indigo-700 hover:to-blue-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800 transition-all duration-200 transform hover:scale-[1.02]"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-3 rounded-lg font-medium hover:from-indigo-700 hover:to-blue-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800 transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
               >
-                Sign In
+                {loading ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    Signing In...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
               </button>
             </form>
 
-            {/* Demo Credentials */}
+            {/* Register Link */}
             <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
-              <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4 text-center">
-                Demo Accounts
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                
-                {/* Manager Demo */}
-                <button
-                  onClick={() => handleQuickLogin('manager')}
-                  className="flex items-center justify-center gap-2 p-3 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                >
-                  <UserCheck size={16} className="text-green-500" />
-                  Manager
-                </button>
-
-                {/* Staff Demo */}
-                <button
-                  onClick={() => handleQuickLogin('staff')}
-                  className="flex items-center justify-center gap-2 p-3 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                >
-                  <Users size={16} className="text-blue-500" />
-                  Staff
-                </button>
-              </div>
-              
-              <div className="mt-4 text-xs text-slate-500 dark:text-slate-400 text-center space-y-1">
-                <p><strong>Manager:</strong> admin / admin (Full Access)</p>
-                <p><strong>Staff:</strong> staff / staff (Limited Access)</p>
+              <div className="text-center">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Don't have an account?{' '}
+                  <Link
+                    to="/register"
+                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
+                  >
+                    Create Account
+                  </Link>
+                </p>
               </div>
             </div>
 

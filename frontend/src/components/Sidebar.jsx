@@ -1,22 +1,34 @@
 import React from 'react';
-import { LayoutDashboard, Package, Truck, ArrowRightLeft, LogOut, Hexagon, User } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Package, Truck, ArrowRightLeft, LogOut, Hexagon, User, Tag, Users, MapPin, FileText } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
-const Sidebar = ({ userRole, onLogout }) => {
+const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout, isManager } = useAuth();
   
   // Define all menu items with RBAC roles
   const allMenuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['manager', 'staff'] },
-    { icon: Package, label: 'Products', path: '/products', roles: ['manager'] }, // Manager Only
-    { icon: Truck, label: 'Receipts', path: '/receipts', roles: ['manager', 'staff'] },
-    { icon: LogOut, label: 'Deliveries', path: '/deliveries', roles: ['manager', 'staff'] },
-    { icon: ArrowRightLeft, label: 'Transfers', path: '/transfers', roles: ['manager', 'staff'] },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['MANAGER', 'STAFF'] },
+    { icon: Package, label: 'Products', path: '/products', roles: ['MANAGER'] },
+    { icon: Tag, label: 'Categories', path: '/categories', roles: ['MANAGER'] },
+    { icon: Users, label: 'Contacts', path: '/contacts', roles: ['MANAGER', 'STAFF'] },
+    { icon: MapPin, label: 'Locations', path: '/locations', roles: ['MANAGER', 'STAFF'] },
+    { icon: Truck, label: 'Receipts', path: '/receipts', roles: ['MANAGER', 'STAFF'] },
+    { icon: LogOut, label: 'Deliveries', path: '/deliveries', roles: ['MANAGER', 'STAFF'] },
+    { icon: ArrowRightLeft, label: 'Transfers', path: '/transfers', roles: ['MANAGER', 'STAFF'] },
+    { icon: FileText, label: 'Adjustments', path: '/adjustments', roles: ['MANAGER', 'STAFF'] },
   ];
 
   // Filter menu based on role
-  const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
+  const menuItems = allMenuItems.filter(item => item.roles.includes(user?.role));
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
     <motion.div 
@@ -33,7 +45,7 @@ const Sidebar = ({ userRole, onLogout }) => {
             StockMaster
           </span>
           <span className="text-xs font-medium text-indigo-500 uppercase tracking-wider">
-            {userRole} View
+            {user?.role || 'User'} View
           </span>
         </div>
       </div>
@@ -63,11 +75,24 @@ const Sidebar = ({ userRole, onLogout }) => {
       
       {/* Footer with Logout Only */}
       <div className="p-6 border-t border-slate-100 dark:border-slate-700 space-y-4 bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+            <User size={20} className="text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+              {user?.fullName}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+              {user?.email}
+            </p>
+          </div>
+        </div>
         <button 
-          onClick={onLogout}
+          onClick={handleLogout}
           className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors font-medium text-sm"
         >
-          <User size={16} /> Logout
+          <LogOut size={16} /> Logout
         </button>
       </div>
     </motion.div>

@@ -5,7 +5,6 @@ const categorySchema = new Schema(
     name: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
     description: {
@@ -14,5 +13,8 @@ const categorySchema = new Schema(
   },
   { timestamps: true }
 );
+
+// Add unique index
+categorySchema.index({ name: 1 }, { unique: true });
 
 export const Category = mongoose.model("Category", categorySchema);

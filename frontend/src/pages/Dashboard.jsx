@@ -1,19 +1,34 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Package, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Package, AlertCircle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const chartData = [
-  { name: 'Mon', stock: 4000 },
-  { name: 'Tue', stock: 3000 },
-  { name: 'Wed', stock: 2000 },
-  { name: 'Thu', stock: 2780 },
-  { name: 'Fri', stock: 1890 },
-  { name: 'Sat', stock: 2390 },
-  { name: 'Sun', stock: 3490 },
-];
+import { dashboardService } from '../services/dashboard.service';
+import Loading from '../components/Loading';
+import EmptyState from '../components/EmptyState';
 
 const Dashboard = () => {
+  // Fetch dashboard stats
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: dashboardService.getStats,
+  });
+
+  if (statsLoading) {
+    return <Loading fullScreen />;
+  }
+
+  if (statsError) {
+    return (
+      <EmptyState
+        icon={AlertCircle}
+        title="Failed to load dashboard"
+        description="Unable to fetch dashboard statistics. Please try again later."
+      />
+    );
+  }
+
+  const statsData = stats?.data || {};
   return (
     <div className="p-2 md:p-10 max-w-[1600px] mx-auto space-y-8">
       
@@ -30,10 +45,38 @@ const Dashboard = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Stock Value" value="$128,430" trend="+12.5%" isPositive={true} icon={Package} color="indigo" />
-        <StatCard title="Low Stock Items" value="23 Items" trend="-2.0%" isPositive={false} icon={AlertCircle} color="rose" />
-        <StatCard title="Incoming Receipts" value="15 Orders" trend="+4.3%" isPositive={true} icon={TrendingUp} color="emerald" />
-        <StatCard title="Outgoing Deliveries" value="8 Pending" trend="+1.2%" isPositive={true} icon={TrendingDown} color="orange" />
+        <StatCard 
+          title="Total Products" 
+          value={statsData.totalProducts || 0} 
+          trend={`${statsData.totalProducts || 0} items`} 
+          isPositive={true} 
+          icon={Package} 
+          color="indigo" 
+        />
+        <StatCard 
+          title="Low Stock Items" 
+          value={statsData.lowStockItems || 0} 
+          trend="Needs attention" 
+          isPositive={false} 
+          icon={AlertCircle} 
+          color="rose" 
+        />
+        <StatCard 
+          title="Pending Receipts" 
+          value={statsData.pendingReceipts || 0} 
+          trend="Incoming" 
+          isPositive={true} 
+          icon={TrendingUp} 
+          color="emerald" 
+        />
+        <StatCard 
+          title="Pending Deliveries" 
+          value={statsData.pendingDeliveries || 0} 
+          trend="Outgoing" 
+          isPositive={true} 
+          icon={TrendingDown} 
+          color="orange" 
+        />
       </div>
 
       {/* Charts Area */}
@@ -44,44 +87,39 @@ const Dashboard = () => {
           className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"
         >
           <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Stock Movement Trends</h3>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorStock" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.2} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8'}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8'}} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', backgroundColor: '#fff' }}
-                />
-                <Area type="monotone" dataKey="stock" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorStock)" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-[300px] w-full flex items-center justify-center text-slate-400 dark:text-slate-600">
+            <p className="text-sm">Chart data coming soon from backend API</p>
           </div>
         </motion.div>
 
-        {/* Activity Feed */}
         <motion.div 
           initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
           className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"
         >
           <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Recent Activity</h3>
           <div className="space-y-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex gap-4 items-start">
-                <div className="w-2 h-2 mt-2 rounded-full bg-indigo-500 shrink-0 ring-4 ring-indigo-100 dark:ring-indigo-900"></div>
-                <div>
-                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200">New Stock Received</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Vendor ABC delivered 500 units of Steel Rods.</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">2 hours ago</p>
+            {statsData.recentOperations && statsData.recentOperations.length > 0 ? (
+              statsData.recentOperations.map((operation, i) => (
+                <div key={i} className="flex gap-4 items-start">
+                  <div className="w-2 h-2 mt-2 rounded-full bg-indigo-500 shrink-0 ring-4 ring-indigo-100 dark:ring-indigo-900"></div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                      {operation.type} Operation
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {operation.reference || 'No reference'}
+                    </p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                      {new Date(operation.createdAt).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-slate-400 dark:text-slate-600 text-center py-8">
+                No recent activity
+              </p>
+            )}
           </div>
         </motion.div>
       </div>

@@ -6,33 +6,32 @@ const operationLineSchema = new Schema({
     ref: "Product",
     required: true,
   },
-  demandQuantity: { 
-    type: Number, 
+  demandQuantity: {
+    type: Number,
     required: true,
-    min: [0, "Demand quantity cannot be negative"]
+    min: [0, "Demand quantity cannot be negative"],
   }, // Ordered Qty
-  doneQuantity: { 
-    type: Number, 
+  doneQuantity: {
+    type: Number,
     default: 0,
-    min: [0, "Done quantity cannot be negative"]
+    min: [0, "Done quantity cannot be negative"],
   }, // Actual Processed Qty
 });
 
 const operationSchema = new mongoose.Schema(
   {
-    reference: { 
-      type: String, 
-      required: true, 
-      unique: true 
+    reference: {
+      type: String,
+      required: true,
     }, // e.g., WH/IN/001
     type: {
       type: String,
       enum: ["RECEIPT", "DELIVERY", "INTERNAL_TRANSFER", "ADJUSTMENT"],
       required: true,
     },
-    partner: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "Contact" 
+    partner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Contact",
     }, // Vendor or Customer
 
     // Movement Logic
@@ -62,6 +61,6 @@ const operationSchema = new mongoose.Schema(
 operationSchema.index({ type: 1 });
 operationSchema.index({ status: 1 });
 operationSchema.index({ scheduledDate: 1 });
-operationSchema.index({ reference: 1 });
+operationSchema.index({ reference: 1 }, { unique: true });
 
 export const Operation = mongoose.model("Operation", operationSchema);

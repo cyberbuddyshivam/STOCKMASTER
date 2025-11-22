@@ -5,12 +5,10 @@ const productSchema = new Schema(
     name: {
       type: String,
       required: true,
-      index: true,
     },
     sku: {
       type: String,
       required: true,
-      unique: true, // Stock Keeping Unit must be unique
       uppercase: true,
     },
     description: {
@@ -46,6 +44,7 @@ const productSchema = new Schema(
 
 // Add index for efficient querying
 productSchema.index({ name: 1 });
+productSchema.index({ sku: 1 }, { unique: true });
 productSchema.index({ category: 1 });
 
 export const Product = mongoose.model("Product", productSchema);

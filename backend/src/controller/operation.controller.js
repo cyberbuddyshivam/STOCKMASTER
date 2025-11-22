@@ -199,4 +199,36 @@ const validateOperation = asyncHandler(async (req, res) => {
   }
 });
 
-export { createOperation, getOperations, validateOperation };
+const cancelOperation = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const operation = await Operation.findById(id);
+
+  if (!operation) {
+    throw new ApiError(404, "Operation not found");
+  }
+
+  if (operation.status === "DONE") {
+    throw new ApiError(400, "Cannot cancel a validated operation");
+  }
+
+  if (operation.status === "CANCELLED") {
+    throw new ApiError(400, "Operation is already cancelled");
+  }
+
+  operation.status = "CANCELLED";
+  await operation.save();
+
+  const updatedOperation = await Operation.findById(id)
+    .populate("sourceLocation")
+    .populate("destinationLocation")
+    .populate("partner")
+    .populate("lines.product");
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedOperation, "Operation cancelled successfully")
+    );
+});
+
+export { createOperation, getOperations, validateOperation, cancelOperation };
