@@ -30,9 +30,15 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+    const requestUrl = originalRequest?.url || '';
 
-    // Handle 401 Unauthorized - Token expired
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Skip token refresh for auth endpoints (login, register, etc.)
+    const isAuthEndpoint = requestUrl.includes('/auth/login') || 
+                           requestUrl.includes('/auth/register') ||
+                           requestUrl.includes('/auth/refresh-token');
+
+    // Handle 401 Unauthorized - Token expired (but not for auth endpoints)
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
 
       try {
@@ -61,8 +67,9 @@ api.interceptors.response.use(
     // Handle other errors
     const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
     
-    // Don't show toast for 401 (handled above) or validation errors
-    if (error.response?.status !== 401 && error.response?.status !== 422) {
+    // Don't show toast for validation errors (422) - they're handled by forms
+    // Show toast for other errors including 401 on auth endpoints
+    if (error.response?.status !== 422) {
       toast.error(errorMessage);
     }
 
