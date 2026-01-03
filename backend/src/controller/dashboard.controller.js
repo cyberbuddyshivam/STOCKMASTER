@@ -81,13 +81,102 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 
   const outOfStockCount = outOfStockItems[0]?.outOfStockCount || 0;
 
+  const recentOperations = await Operation.find({})
+    .sort({ createdAt: -1 })
+    .limit(6)
+    .select("reference type status createdAt")
+    .lean();
+
+  const trendDays = 7;
+  const trendStartDate = new Date();
+  trendStartDate.setDate(trendStartDate.getDate() - (trendDays - 1));
+
+  const stockMovementRaw = await Operation.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: trendStartDate },
+        status: "DONE",
+      },
+    },
+    { $unwind: "$lines" },
+    {
+      $project: {
+        type: 1,
+        quantity: {
+          $ifNull: ["$lines.doneQuantity", "$lines.demandQuantity"],
+        },
+        date: {
+          $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { date: "$date", type: "$type" },
+        totalQuantity: { $sum: "$quantity" },
+      },
+    },
+    { $sort: { "_id.date": 1 } },
+  ]);
+
+  const stockMovementMap = stockMovementRaw.reduce((acc, item) => {
+    const dateKey = item._id.date;
+    if (!acc[dateKey]) {
+      acc[dateKey] = {
+        receipts: 0,
+        deliveries: 0,
+        internalTransfers: 0,
+        adjustments: 0,
+      };
+    }
+
+    switch (item._id.type) {
+      case "RECEIPT":
+        acc[dateKey].receipts = item.totalQuantity;
+        break;
+      case "DELIVERY":
+        acc[dateKey].deliveries = item.totalQuantity;
+        break;
+      case "INTERNAL_TRANSFER":
+        acc[dateKey].internalTransfers = item.totalQuantity;
+        break;
+      case "ADJUSTMENT":
+        acc[dateKey].adjustments = item.totalQuantity;
+        break;
+      default:
+        break;
+    }
+
+    return acc;
+  }, {});
+
+  const stockMovements = Array.from({ length: trendDays }).map((_, index) => {
+    const current = new Date(trendStartDate);
+    current.setDate(trendStartDate.getDate() + index);
+    const dateKey = current.toISOString().slice(0, 10);
+    const movement = stockMovementMap[dateKey] || {
+      receipts: 0,
+      deliveries: 0,
+      internalTransfers: 0,
+      adjustments: 0,
+    };
+
+    return {
+      date: dateKey,
+      ...movement,
+    };
+  });
+
   const stats = {
     totalProducts,
     pendingReceipts,
     pendingDeliveries,
     internalTransfers,
     lowStockCount,
+    lowStockItems: lowStockCount,
     outOfStockCount,
+    recentOperations,
+    stockMovements,
   };
 
   return res

@@ -112,7 +112,7 @@ const ProductList = () => {
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {filteredProducts.map((product) => {
-                  const totalStock = product.totalStock || 0;
+                  const totalStock = Number(product.totalStock ?? 0);
                   const isLowStock = totalStock <= product.minStockLevel;
                   const isOutOfStock = totalStock === 0;
 
@@ -140,7 +140,7 @@ const ProductList = () => {
                         {product.category?.name || 'N/A'}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                        {product.unit}
+                        {product.unitOfMeasure || 'Units'}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                         {product.minStockLevel}

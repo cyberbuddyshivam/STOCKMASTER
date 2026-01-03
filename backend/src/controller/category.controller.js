@@ -1,4 +1,5 @@
 import { Category } from "../models/category.model.js";
+import { Product } from "../models/product.model.js";
 import { ApiResponse } from "../utils/api-response.js";
 import { ApiError } from "../utils/api-error.js";
 import { asyncHandler } from "../utils/async-handler.js";
@@ -24,17 +25,48 @@ const createCategory = asyncHandler(async (req, res) => {
     description,
   });
 
+  const categoryResponse = category.toObject();
+  categoryResponse.productCount = 0;
+
   return res
     .status(201)
-    .json(new ApiResponse(201, category, "Category created successfully"));
+    .json(
+      new ApiResponse(201, categoryResponse, "Category created successfully")
+    );
 });
 
 const getCategories = asyncHandler(async (req, res) => {
-  const categories = await Category.find({}).sort({ createdAt: -1 });
+  const categories = await Category.find({}).sort({ createdAt: -1 }).lean();
+
+  const categoryIds = categories.map((category) => category._id);
+  let productCounts = [];
+
+  if (categoryIds.length > 0) {
+    productCounts = await Product.aggregate([
+      { $match: { category: { $in: categoryIds } } },
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+    ]);
+  }
+
+  const countMap = productCounts.reduce((acc, item) => {
+    acc[item._id.toString()] = item.count;
+    return acc;
+  }, {});
+
+  const categoriesWithCounts = categories.map((category) => ({
+    ...category,
+    productCount: countMap[category._id.toString()] || 0,
+  }));
 
   return res
     .status(200)
-    .json(new ApiResponse(200, categories, "Categories fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        categoriesWithCounts,
+        "Categories fetched successfully"
+      )
+    );
 });
 
 const getCategoryById = asyncHandler(async (req, res) => {
@@ -78,9 +110,16 @@ const updateCategory = asyncHandler(async (req, res) => {
 
   await category.save();
 
+  const productCount = await Product.countDocuments({ category: category._id });
+
+  const categoryResponse = category.toObject();
+  categoryResponse.productCount = productCount;
+
   return res
     .status(200)
-    .json(new ApiResponse(200, category, "Category updated successfully"));
+    .json(
+      new ApiResponse(200, categoryResponse, "Category updated successfully")
+    );
 });
 
 const deleteCategory = asyncHandler(async (req, res) => {
@@ -93,7 +132,6 @@ const deleteCategory = asyncHandler(async (req, res) => {
   }
 
   // Check if any products are using this category
-  const { Product } = await import("../models/product.model.js");
   const productsCount = await Product.countDocuments({ category: id });
 
   if (productsCount > 0) {

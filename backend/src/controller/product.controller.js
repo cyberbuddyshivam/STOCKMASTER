@@ -137,10 +137,13 @@ const createProduct = asyncHandler(async (req, res) => {
       "category"
     );
 
+    const productResponse = populatedProduct.toObject();
+    productResponse.totalStock = initialStock || 0;
+
     return res
       .status(201)
       .json(
-        new ApiResponse(201, populatedProduct, "Product created successfully")
+        new ApiResponse(201, productResponse, "Product created successfully")
       );
   } catch (error) {
     await session.abortTransaction();
@@ -167,11 +170,34 @@ const getProducts = asyncHandler(async (req, res) => {
 
   const products = await Product.find(query)
     .populate("category")
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const productIds = products.map((product) => product._id);
+  let stockTotals = [];
+
+  if (productIds.length > 0) {
+    stockTotals = await StockQuant.aggregate([
+      { $match: { product: { $in: productIds } } },
+      { $group: { _id: "$product", totalQuantity: { $sum: "$quantity" } } },
+    ]);
+  }
+
+  const stockMap = stockTotals.reduce((acc, item) => {
+    acc[item._id.toString()] = item.totalQuantity;
+    return acc;
+  }, {});
+
+  const productsWithStock = products.map((product) => ({
+    ...product,
+    totalStock: stockMap[product._id.toString()] || 0,
+  }));
 
   return res
     .status(200)
-    .json(new ApiResponse(200, products, "Products fetched successfully"));
+    .json(
+      new ApiResponse(200, productsWithStock, "Products fetched successfully")
+    );
 });
 
 const getProductById = asyncHandler(async (req, res) => {
