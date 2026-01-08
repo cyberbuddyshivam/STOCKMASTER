@@ -174,9 +174,11 @@ StockMaster
 
 (Update this section if your repo evolves)
 
-Frontend: JavaScript (UI layer)
+Frontend: React.js
 
-Backend: Java
+Backend: Node.js
+
+Database: MongoDB
 
 Version Control: Git & GitHub
 
@@ -215,7 +217,7 @@ Mobile-friendly interface
 Shivam Sharma
 💻 GitHub: https://github.com/cyberbuddyshivam
 
-🔗 LinkedIn: (add your LinkedIn URL)
-✉️ Email: (optional)
+🔗 LinkedIn: https://www.linkedin.com/in/cyberbuddyshivam
+✉️ Email: shivam1110sharma@gmail.com
 
 ⭐ If you find this project useful, consider giving it a star!
